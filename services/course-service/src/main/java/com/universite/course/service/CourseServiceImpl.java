@@ -19,11 +19,13 @@ public class CourseServiceImpl implements CourseService {
 
     public CourseServiceImpl() {
 
-        // OPTION A
-        String connectionString = "mongodb+srv://dbUser:root@university.un0krqn.mongodb.net/?appName=university";
-
-        // OPTION B
-        //String connectionString = "mongodb://localhost:27017";
+        // Récupération de la chaîne de connexion depuis les variables d'environnement
+        String connectionString = System.getenv("MONGO_URI");
+        if (connectionString == null || connectionString.isEmpty()) {
+            // Valeur par défaut pour le développement local si la variable n'est pas définie
+            connectionString = "mongodb://localhost:27017";
+            System.out.println("MONGO_URI non défini, utilisation de localhost.");
+        }
 
         try {
             MongoClient client = MongoClients.create(connectionString);

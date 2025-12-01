@@ -26,7 +26,8 @@ services:
     container_name: soa-course-service
     ports:
       - "8082:8082"
-    # Pas besoin de variables DB car le lien Atlas est dans votre code Java
+    environment:
+      - MONGO_URI=${MONGO_URI}
 
   # ------------------------------------
   # 3. SERVICE FACTURATION (.NET - Port 5000)
@@ -36,4 +37,5 @@ services:
     container_name: soa-billing-service
     ports:
       - "5000:8080" # On map le 8080 interne vers le 5000 externe
-    # Pas besoin de variables DB car le lien Atlas est dans votre code C#
+    environment:
+      - MONGO_URI=${MONGO_URI}

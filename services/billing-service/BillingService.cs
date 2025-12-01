@@ -11,10 +11,14 @@ namespace BillingService
 
         public BillingService()
         {
-            // OPTION A
-            // string connectionString = "mongodb+srv://admin:motdepasse@cluster...";
-            // --- CONNEXION (Mettez votre lien Atlas si besoin) ---
-            string connectionString = "mongodb+srv://dbUser:root@university.un0krqn.mongodb.net/?appName=university"; 
+            // Récupération de la chaîne de connexion depuis les variables d'environnement
+            string connectionString = Environment.GetEnvironmentVariable("MONGO_URI");
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                // Valeur par défaut pour le développement local
+                connectionString = "mongodb://localhost:27017";
+                Console.WriteLine("MONGO_URI non défini, utilisation de localhost.");
+            }
             
             var client = new MongoClient(connectionString);
             var database = client.GetDatabase("univ_db_billing");
