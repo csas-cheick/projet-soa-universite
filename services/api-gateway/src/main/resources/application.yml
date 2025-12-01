@@ -1,0 +1,23 @@
+server:
+  port: 8081  # Votre port Gateway actuel
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # ROUTE 1 : SERVICE COURS (Java/SOAP)
+        - id: course-service
+          # En local, Java tourne sur le 8082
+          uri: http://localhost:8082
+          predicates:
+            - Path=/ws/cours/**
+
+        # ROUTE 2 : SERVICE FACTURATION (.NET/SOAP)
+        - id: billing-service
+          # En local, .NET tourne sur le 5000
+          # (Dans Docker plus tard, ce sera http://billing-service:80)
+          uri: http://localhost:5000
+          predicates:
+            - Path=/ws/billing/**

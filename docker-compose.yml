@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # ------------------------------------
+  # 1. API GATEWAY (Port 8081)
+  # ------------------------------------
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: soa-gateway
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      # Dans Docker, on utilise les noms des services ci-dessous
+      - COURSE_SERVICE_URL=http://course-service:8082
+      - BILLING_SERVICE_URL=http://billing-service:8080
+    depends_on:
+      - course-service
+      - billing-service
+
+  # ------------------------------------
+  # 2. SERVICE COURS (Java - Port 8082)
+  # ------------------------------------
+  course-service:
+    build: ./services/course-service
+    container_name: soa-course-service
+    ports:
+      - "8082:8082"
+    # Pas besoin de variables DB car le lien Atlas est dans votre code Java
+
+  # ------------------------------------
+  # 3. SERVICE FACTURATION (.NET - Port 5000)
+  # ------------------------------------
+  billing-service:
+    build: ./services/billing-service
+    container_name: soa-billing-service
+    ports:
+      - "5000:8080" # On map le 8080 interne vers le 5000 externe
+    # Pas besoin de variables DB car le lien Atlas est dans votre code C#
