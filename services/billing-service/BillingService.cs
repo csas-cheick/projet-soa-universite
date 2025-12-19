@@ -15,8 +15,8 @@ namespace BillingService
             string connectionString = Environment.GetEnvironmentVariable("MONGO_URI");
             if (string.IsNullOrEmpty(connectionString))
             {
-                // Valeur par défaut pour le développement local
-                connectionString = "mongodb://localhost:27017";
+                // Valeur par défaut
+                connectionString = "mongodb+srv://dbUser:root@university.un0krqn.mongodb.net/?appName=university";
                 Console.WriteLine("MONGO_URI non défini, utilisation de localhost.");
             }
             

@@ -1,41 +1,52 @@
 version: '3.8'
 
 services:
-  # ------------------------------------
   # 1. API GATEWAY (Port 8081)
-  # ------------------------------------
   api-gateway:
     build: ./services/api-gateway
     container_name: soa-gateway
     ports:
       - "8081:8081"
-    environment:
-      - SERVER_PORT=8081
-      # Dans Docker, on utilise les noms des services ci-dessous
-      - COURSE_SERVICE_URL=http://course-service:8082
-      - BILLING_SERVICE_URL=http://billing-service:8080
     depends_on:
+      - auth-service
       - course-service
-      - billing-service
+      - student-service
 
-  # ------------------------------------
-  # 2. SERVICE COURS (Java - Port 8082)
-  # ------------------------------------
+  # 2. SERVICE AUTH (Port 8083)
+  auth-service:
+    build: ./services/auth-service
+    container_name: soa-auth
+    ports:
+      - "8083:8083"
+
+  # 3. SERVICE COURS (Port 8082)
   course-service:
     build: ./services/course-service
-    container_name: soa-course-service
+    container_name: soa-course
     ports:
       - "8082:8082"
     environment:
       - MONGO_URI=${MONGO_URI}
 
-  # ------------------------------------
-  # 3. SERVICE FACTURATION (.NET - Port 5000)
-  # ------------------------------------
+  # 4. SERVICE FACTURATION (Port 5000)
   billing-service:
     build: ./services/billing-service
-    container_name: soa-billing-service
+    container_name: soa-billing
     ports:
-      - "5000:8080" # On map le 8080 interne vers le 5000 externe
+      - "5000:8080"
     environment:
       - MONGO_URI=${MONGO_URI}
+
+  # 5. SERVICE ÉTUDIANTS (Port 3000)
+  student-service:
+    build: ./services/student-service
+    container_name: soa-student
+    ports:
+      - "3000:3000"
+
+  # 6. SERVICE NOTES (Port 8000)
+  grade-service:
+    build: ./services/grade-service
+    container_name: soa-grade
+    ports:
+      - "8000:8000"

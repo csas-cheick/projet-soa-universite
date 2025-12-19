@@ -1,0 +1,14 @@
+server:
+  port: 8083 # Port dédié à l'Auth
+
+spring:
+  application:
+    name: auth-service
+  data:
+    mongodb:
+      uri: mongodb+srv://dbUser:root@university.un0krqn.mongodb.net/auth_univ_db?appName=university
+
+# Configuration secrète pour signer les JWT
+jwt:
+  secret: MaSuperCleSecretePourLeProjetSOAUniversiteQuiDoitEtreTresLongue2024
+  expiration: 86400000 # 24 heures en millisecondes
