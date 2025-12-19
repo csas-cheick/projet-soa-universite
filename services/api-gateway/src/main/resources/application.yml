@@ -1,23 +1,59 @@
 server:
-  port: 8081  # Votre port Gateway actuel
+  port: 8081
 
 spring:
   application:
     name: api-gateway
   cloud:
     gateway:
+      # --- CONFIGURATION CORS (Pour que React fonctionne) ---
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+      
       routes:
-        # ROUTE 1 : SERVICE COURS (Java/SOAP)
+        # --- 1. AUTH (Port 8083) ---
+        - id: auth-service
+          uri: http://auth-service:8083
+          predicates:
+            - Path=/auth/**
+
+        # --- 2. COURS (Port 8082) ---
         - id: course-service
-          # En local, Java tourne sur le 8082
-          uri: http://localhost:8082
+          uri: http://course-service:8082
           predicates:
             - Path=/ws/cours/**
+          filters:
+            - AuthenticationFilter
 
-        # ROUTE 2 : SERVICE FACTURATION (.NET/SOAP)
+        # --- 3. FACTURATION (Port 8080 interne) ---
         - id: billing-service
-          # En local, .NET tourne sur le 5000
-          # (Dans Docker plus tard, ce sera http://billing-service:80)
-          uri: http://localhost:5000
+          uri: http://billing-service:8080
           predicates:
             - Path=/ws/billing/**
+          filters:
+            - AuthenticationFilter
+
+        # --- 4. ÉTUDIANTS (Port 3000) ---
+        - id: student-service
+          uri: http://student-service:3000
+          predicates:
+            - Path=/api/etudiants/**
+          filters:
+            - AuthenticationFilter
+
+        # --- 5. NOTES (Port 8000) ---
+        - id: grade-service
+          uri: http://grade-service:8000
+          predicates:
+            - Path=/api/notes/**
+          filters:
+            - AuthenticationFilter

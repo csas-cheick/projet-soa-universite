@@ -20,4 +20,7 @@ public interface CourseService {
 
     @WebMethod
     boolean deleteCourse(@WebParam(name = "id") Long id);
+
+    @WebMethod
+    boolean updateCourse(@WebParam(name = "id") Long id, @WebParam(name = "cours") Cours cours);
 }

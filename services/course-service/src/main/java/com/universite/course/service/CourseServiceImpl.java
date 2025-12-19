@@ -22,8 +22,8 @@ public class CourseServiceImpl implements CourseService {
         // Récupération de la chaîne de connexion depuis les variables d'environnement
         String connectionString = System.getenv("MONGO_URI");
         if (connectionString == null || connectionString.isEmpty()) {
-            // Valeur par défaut pour le développement local si la variable n'est pas définie
-            connectionString = "mongodb://localhost:27017";
+            // Valeur par défaut
+            connectionString = "mongodb+srv://dbUser:root@university.un0krqn.mongodb.net/?appName=university";
             System.out.println("MONGO_URI non défini, utilisation de localhost.");
         }
 
@@ -47,6 +47,23 @@ public class CourseServiceImpl implements CourseService {
             list.add(mapToCours(doc));
         }
         return list;
+    }
+
+    @Override
+    public boolean updateCourse(Long id, Cours cours) {
+        Document updatedValues = new Document()
+                .append("nom", cours.getNom())
+                .append("description", cours.getDescription())
+                .append("salle", cours.getSalle())
+                .append("horaire", cours.getHoraire());
+
+        var result = collection.updateOne(
+                Filters.eq("_id", id), 
+                new Document("$set", updatedValues)
+        );
+        
+        System.out.println("Mise à jour cours " + id + " : " + (result.getModifiedCount() > 0));
+        return result.getModifiedCount() > 0; // Renvoie vrai si modifié
     }
 
     @Override
