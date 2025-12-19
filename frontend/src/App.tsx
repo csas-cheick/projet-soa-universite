@@ -43,7 +43,7 @@ export default function App() {
     setRole(null);
   };
 
-  if (!token) return <LoginScreen onLogin={(t, r) => {
+  if (!token) return <LoginScreen onLogin={(t: string, r: string) => {
     localStorage.setItem('jwt_token', t);
     localStorage.setItem('user_role', r);
     setToken(t);
@@ -86,10 +86,10 @@ export default function App() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 min-h-[600px] p-6">
-            {activeTab === 'students' && <StudentsModule token={token} />}
-            {activeTab === 'grades' && <GradesModule token={token} />}
-            {activeTab === 'courses' && <CoursesModule token={token} />}
-            {activeTab === 'billing' && <BillingModule token={token} />}
+            {activeTab === 'students' && <StudentsModule token={token} role={role} />}
+            {activeTab === 'grades' && <GradesModule token={token} role={role} />}
+            {activeTab === 'courses' && <CoursesModule token={token} role={role} />}
+            {activeTab === 'billing' && <BillingModule token={token} role={role} />}
           </div>
         </div>
       </main>
@@ -98,7 +98,7 @@ export default function App() {
 }
 
 // --- MODULE 1 : ÉTUDIANTS (CRUD COMPLET + ID) ---
-function StudentsModule({ token }: { token: string }) {
+function StudentsModule({ token, role }: { token: string; role: string | null }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [searchId, setSearchId] = useState('');
   const [newStudent, setNewStudent] = useState({ nom: '', prenom: '', email: '', classe: '' });
@@ -204,8 +204,12 @@ function StudentsModule({ token }: { token: string }) {
                       <td className="px-4 py-3">{s.prenom}</td>
                       <td className="px-4 py-3"><span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">{s.classe}</span></td>
                       <td className="px-4 py-3 text-right space-x-3">
-                        <button onClick={() => setEditMode(s._id)} className="text-slate-400 hover:text-blue-600"><Edit size={16} /></button>
-                        <button onClick={() => handleDelete(s._id)} className="text-slate-400 hover:text-red-600"><Trash2 size={16} /></button>
+                        {role === 'ADMIN' && (
+                          <>
+                            <button onClick={() => setEditMode(s._id)} className="text-slate-400 hover:text-blue-600"><Edit size={16} /></button>
+                            <button onClick={() => handleDelete(s._id)} className="text-slate-400 hover:text-red-600"><Trash2 size={16} /></button>
+                          </>
+                        )}
                       </td>
                     </>
                   )}
@@ -216,26 +220,29 @@ function StudentsModule({ token }: { token: string }) {
         </div>
       </div>
 
-      <div className="bg-slate-50 p-5 rounded-lg border h-fit sticky top-0">
-        <h3 className="font-bold mb-4 flex items-center gap-2"><PlusCircle size={18} /> Ajouter Étudiant</h3>
-        <form onSubmit={handleAdd} className="space-y-3">
-          <input className="w-full border rounded p-2 text-sm" placeholder="Nom" required value={newStudent.nom} onChange={e => setNewStudent({...newStudent, nom: e.target.value})} />
-          <input className="w-full border rounded p-2 text-sm" placeholder="Prénom" required value={newStudent.prenom} onChange={e => setNewStudent({...newStudent, prenom: e.target.value})} />
-          <input className="w-full border rounded p-2 text-sm" placeholder="Email" type="email" required value={newStudent.email} onChange={e => setNewStudent({...newStudent, email: e.target.value})} />
-          <input className="w-full border rounded p-2 text-sm" placeholder="Classe (GL3)" required value={newStudent.classe} onChange={e => setNewStudent({...newStudent, classe: e.target.value})} />
-          <button className="w-full bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700">Enregistrer</button>
-        </form>
-      </div>
+      {role === 'ADMIN' && (
+        <div className="bg-slate-50 p-5 rounded-lg border h-fit sticky top-0">
+          <h3 className="font-bold mb-4 flex items-center gap-2"><PlusCircle size={18} /> Ajouter Étudiant</h3>
+          <form onSubmit={handleAdd} className="space-y-3">
+            <input className="w-full border rounded p-2 text-sm" placeholder="Nom" required value={newStudent.nom} onChange={e => setNewStudent({...newStudent, nom: e.target.value})} />
+            <input className="w-full border rounded p-2 text-sm" placeholder="Prénom" required value={newStudent.prenom} onChange={e => setNewStudent({...newStudent, prenom: e.target.value})} />
+            <input className="w-full border rounded p-2 text-sm" placeholder="Email" type="email" required value={newStudent.email} onChange={e => setNewStudent({...newStudent, email: e.target.value})} />
+            <input className="w-full border rounded p-2 text-sm" placeholder="Classe (GL3)" required value={newStudent.classe} onChange={e => setNewStudent({...newStudent, classe: e.target.value})} />
+            <button className="w-full bg-blue-600 text-white py-2 rounded text-sm hover:bg-blue-700">Enregistrer</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
 
 // --- MODULE 2 : NOTES (AVEC VÉRIFICATION) ---
-function GradesModule({ token }: { token: string }) {
+function GradesModule({ token, role }: { token: string; role: string | null }) {
   const [studentId, setStudentId] = useState('');
   const [average, setAverage] = useState<Average | null>(null);
   const [studentGrades, setStudentGrades] = useState<Grade[]>([]);
   const [newGrade, setNewGrade] = useState({ note: 0, coefficient: 1, cours_id: 'SOA' });
+  const [editGradeId, setEditGradeId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   const fetchData = async () => {
@@ -279,6 +286,25 @@ function GradesModule({ token }: { token: string }) {
     fetchData();
   };
 
+  const deleteGrade = async (gradeId: string) => {
+    if (!confirm("Supprimer cette note ?")) return;
+    await fetch(`${API_GATEWAY}/api/notes/${gradeId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    fetchData();
+  };
+
+  const updateGrade = async (gradeId: string, updatedGrade: Partial<Grade>) => {
+    await fetch(`${API_GATEWAY}/api/notes/${gradeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(updatedGrade)
+    });
+    setEditGradeId(null);
+    fetchData();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex gap-4 bg-slate-50 p-4 rounded-lg border flex-col md:flex-row items-start md:items-end">
@@ -310,6 +336,15 @@ function GradesModule({ token }: { token: string }) {
                     <li key={g.id} className="flex justify-between bg-slate-50 p-2 rounded">
                       <span>{g.cours_id}</span>
                       <span className="font-mono">{g.note}/20 <span className="text-xs text-gray-400">(Coeff {g.coefficient})</span></span>
+                      {(role === 'ADMIN' || role === 'PROFESSOR') && (
+                        <div className="flex gap-1">
+                          <button onClick={() => {
+                            setEditGradeId(g.id);
+                            setNewGrade({ note: g.note, coefficient: g.coefficient, cours_id: g.cours_id });
+                          }} className="text-blue-500 hover:text-blue-700 text-xs"><Edit size={14} /></button>
+                          <button onClick={() => deleteGrade(g.id)} className="text-red-500 hover:text-red-700 text-xs"><Trash2 size={14} /></button>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -318,24 +353,31 @@ function GradesModule({ token }: { token: string }) {
           ) : <div className="text-center text-gray-400 py-10">Saisissez un ID valide pour voir les résultats</div>}
         </div>
 
-        <div className="bg-white border rounded-xl p-6">
-          <h3 className="font-bold text-gray-800 mb-4">Ajouter une note</h3>
-          <form onSubmit={addGrade} className="space-y-4">
-            <div><label className="text-xs uppercase text-gray-500">Matière</label><input className="w-full border rounded p-2" value={newGrade.cours_id} onChange={e => setNewGrade({...newGrade, cours_id: e.target.value})} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="text-xs uppercase text-gray-500">Note</label><input type="number" step="0.5" className="w-full border rounded p-2" value={newGrade.note} onChange={e => setNewGrade({...newGrade, note: parseFloat(e.target.value)})} /></div>
-              <div><label className="text-xs uppercase text-gray-500">Coeff</label><input type="number" className="w-full border rounded p-2" value={newGrade.coefficient} onChange={e => setNewGrade({...newGrade, coefficient: parseInt(e.target.value)})} /></div>
-            </div>
-            <button disabled={!studentId} className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 disabled:opacity-50">Ajouter Note</button>
-          </form>
-        </div>
+        {(role === 'ADMIN' || role === 'PROFESSOR') && (
+          <div className="bg-white border rounded-xl p-6">
+            <h3 className="font-bold text-gray-800 mb-4 flex justify-between items-center">
+              {editGradeId ? 'Modifier la note' : 'Ajouter une note'}
+              {editGradeId && <button onClick={() => {setEditGradeId(null); setNewGrade({ note: 0, coefficient: 1, cours_id: 'SOA' });}} className="text-xs underline">Annuler</button>}
+            </h3>
+            <form onSubmit={editGradeId ? (e) => {e.preventDefault(); updateGrade(editGradeId, newGrade);} : addGrade} className="space-y-4">
+              <div><label className="text-xs uppercase text-gray-500">Matière</label><input className="w-full border rounded p-2" value={newGrade.cours_id} onChange={e => setNewGrade({...newGrade, cours_id: e.target.value})} /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="text-xs uppercase text-gray-500">Note</label><input type="number" step="0.5" className="w-full border rounded p-2" value={newGrade.note} onChange={e => setNewGrade({...newGrade, note: parseFloat(e.target.value)})} /></div>
+                <div><label className="text-xs uppercase text-gray-500">Coeff</label><input type="number" className="w-full border rounded p-2" value={newGrade.coefficient} onChange={e => setNewGrade({...newGrade, coefficient: parseInt(e.target.value)})} /></div>
+              </div>
+              <button disabled={!studentId} className={`w-full text-white py-2 rounded hover:opacity-90 disabled:opacity-50 ${editGradeId ? 'bg-blue-600' : 'bg-green-600'}`}>
+                {editGradeId ? 'Mettre à jour' : 'Ajouter Note'}
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // --- MODULE 3 : COURS (SOAP + DELETE + UPDATE) ---
-function CoursesModule({ token }: { token: string }) {
+function CoursesModule({ token, role }: { token: string; role: string | null }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [formData, setFormData] = useState({ nom: '', description: '', salle: '', horaire: '' });
   const [editId, setEditId] = useState<string | null>(null);
@@ -416,33 +458,39 @@ function CoursesModule({ token }: { token: string }) {
               <div className="text-xs mt-1 flex gap-2"><span className="bg-yellow-100 px-2 rounded text-yellow-800">{c.salle}</span> <span className="bg-green-100 px-2 rounded text-green-800">{c.horaire}</span></div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => prepareEdit(c)} className="text-blue-400 hover:text-blue-600"><Edit size={18} /></button>
-              <button onClick={() => deleteCourse(c.id)} className="text-red-400 hover:text-red-600"><Trash2 size={18} /></button>
+              {role === 'ADMIN' && (
+                <>
+                  <button onClick={() => prepareEdit(c)} className="text-blue-400 hover:text-blue-600"><Edit size={18} /></button>
+                  <button onClick={() => deleteCourse(c.id)} className="text-red-400 hover:text-red-600"><Trash2 size={18} /></button>
+                </>
+              )}
             </div>
           </div>
         ))}
       </div>
-      <div className="bg-yellow-50 p-5 rounded border h-fit sticky top-0">
-        <h3 className="font-bold mb-4 text-yellow-800 flex justify-between items-center">
-          {editId ? 'Modifier Cours' : 'Ajouter Cours'}
-          {editId && <button onClick={() => {setEditId(null); setFormData({ nom: '', description: '', salle: '', horaire: '' });}} className="text-xs underline">Annuler</button>}
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input className="w-full border rounded p-2" placeholder="Nom" value={formData.nom} onChange={e => setFormData({...formData, nom: e.target.value})} />
-          <input className="w-full border rounded p-2" placeholder="Desc" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-          <input className="w-full border rounded p-2" placeholder="Salle" value={formData.salle} onChange={e => setFormData({...formData, salle: e.target.value})} />
-          <input className="w-full border rounded p-2" placeholder="Horaire" value={formData.horaire} onChange={e => setFormData({...formData, horaire: e.target.value})} />
-          <button className={`w-full text-white py-2 rounded transition-colors ${editId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}>
-            {editId ? 'Mettre à jour' : 'Ajouter'}
-          </button>
-        </form>
-      </div>
+      {role === 'ADMIN' && (
+        <div className="bg-yellow-50 p-5 rounded border h-fit sticky top-0">
+          <h3 className="font-bold mb-4 text-yellow-800 flex justify-between items-center">
+            {editId ? 'Modifier Cours' : 'Ajouter Cours'}
+            {editId && <button onClick={() => {setEditId(null); setFormData({ nom: '', description: '', salle: '', horaire: '' });}} className="text-xs underline">Annuler</button>}
+          </h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input className="w-full border rounded p-2" placeholder="Nom" value={formData.nom} onChange={e => setFormData({...formData, nom: e.target.value})} />
+            <input className="w-full border rounded p-2" placeholder="Desc" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+            <input className="w-full border rounded p-2" placeholder="Salle" value={formData.salle} onChange={e => setFormData({...formData, salle: e.target.value})} />
+            <input className="w-full border rounded p-2" placeholder="Horaire" value={formData.horaire} onChange={e => setFormData({...formData, horaire: e.target.value})} />
+            <button className={`w-full text-white py-2 rounded transition-colors ${editId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}>
+              {editId ? 'Mettre à jour' : 'Ajouter'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
 
 // --- MODULE 4 : FACTURATION (SOAP .NET + RELEVÉ + VÉRIF) ---
-function BillingModule({ token }: { token: string }) {
+function BillingModule({ token, role }: { token: string; role: string | null }) {
   const [studentId, setStudentId] = useState('');
   const [amount, setAmount] = useState('');
   const [speciality, setSpeciality] = useState('Informatique');
@@ -525,7 +573,9 @@ function BillingModule({ token }: { token: string }) {
           {errorMsg && <div className="bg-red-100 text-red-700 p-2 text-sm rounded mb-3">{errorMsg}</div>}
           
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={createInvoice} disabled={!amount} className="bg-blue-600 text-white py-2 rounded disabled:opacity-50">Créer Facture</button>
+            {role === 'ADMIN' && (
+              <button onClick={createInvoice} disabled={!amount} className="bg-blue-600 text-white py-2 rounded disabled:opacity-50">Créer Facture</button>
+            )}
             <button onClick={generateStatement} className="bg-gray-800 text-white py-2 rounded flex items-center justify-center gap-2"><FileText size={16}/> Relevé</button>
           </div>
         </div>
@@ -569,11 +619,15 @@ function NavButton({ active, onClick, icon, label }: any) {
 
 // --- LOGIN SCREEN ---
 function LoginScreen({ onLogin }: any) {
+  const [isLogin, setIsLogin] = useState(true);
   const [creds, setCreds] = useState({email: 'test@univ.tn', password: '123'});
+  const [registerData, setRegisterData] = useState({email: '', password: '', role: 'STUDENT'});
   const [err, setErr] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const login = async (e: any) => {
     e.preventDefault();
+    setErr('');
     try {
       const res = await fetch(`${API_GATEWAY}/auth/login`, {
         method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(creds)
@@ -584,16 +638,58 @@ function LoginScreen({ onLogin }: any) {
     } catch { setErr("Erreur Gateway"); }
   };
 
+  const register = async (e: any) => {
+    e.preventDefault();
+    setErr('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch(`${API_GATEWAY}/auth/register`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(registerData)
+      });
+      if(res.ok) {
+        setSuccessMsg("Inscription réussie ! Vous pouvez maintenant vous connecter.");
+        setIsLogin(true);
+        setRegisterData({email: '', password: '', role: 'STUDENT'});
+      } else {
+        const data = await res.json();
+        setErr(data.message || "Erreur inscription");
+      }
+    } catch { setErr("Erreur Gateway"); }
+  };
+
   return (
     <div className="h-screen flex items-center justify-center bg-slate-900">
       <div className="bg-white p-8 rounded-2xl w-96 shadow-2xl">
-        <div className="text-center mb-6"><div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600"><GraduationCap size={32} /></div><h1 className="text-2xl font-bold">Connexion</h1></div>
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+            <GraduationCap size={32} />
+          </div>
+          <h1 className="text-2xl font-bold">{isLogin ? 'Connexion' : 'Inscription'}</h1>
+        </div>
+        <div className="flex mb-4">
+          <button onClick={() => {setIsLogin(true); setErr(''); setSuccessMsg('');}} className={`flex-1 py-2 rounded-l-lg ${isLogin ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Connexion</button>
+          <button onClick={() => {setIsLogin(false); setErr(''); setSuccessMsg('');}} className={`flex-1 py-2 rounded-r-lg ${!isLogin ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}>Inscription</button>
+        </div>
         {err && <div className="bg-red-100 text-red-600 p-2 rounded mb-4 text-sm text-center">{err}</div>}
-        <form onSubmit={login} className="space-y-4">
-          <input className="w-full border p-2 rounded" value={creds.email} onChange={e=>setCreds({...creds, email: e.target.value})} />
-          <input className="w-full border p-2 rounded" type="password" value={creds.password} onChange={e=>setCreds({...creds, password: e.target.value})} />
-          <button className="w-full bg-blue-600 text-white py-2 rounded font-bold">Entrer</button>
-        </form>
+        {successMsg && <div className="bg-green-100 text-green-600 p-2 rounded mb-4 text-sm text-center">{successMsg}</div>}
+        {isLogin ? (
+          <form onSubmit={login} className="space-y-4">
+            <input className="w-full border p-2 rounded" placeholder="Email" value={creds.email} onChange={e=>setCreds({...creds, email: e.target.value})} />
+            <input className="w-full border p-2 rounded" type="password" placeholder="Mot de passe" value={creds.password} onChange={e=>setCreds({...creds, password: e.target.value})} />
+            <button className="w-full bg-blue-600 text-white py-2 rounded font-bold">Entrer</button>
+          </form>
+        ) : (
+          <form onSubmit={register} className="space-y-4">
+            <input className="w-full border p-2 rounded" placeholder="Email" type="email" required value={registerData.email} onChange={e=>setRegisterData({...registerData, email: e.target.value})} />
+            <input className="w-full border p-2 rounded" type="password" placeholder="Mot de passe" required value={registerData.password} onChange={e=>setRegisterData({...registerData, password: e.target.value})} />
+            <select className="w-full border p-2 rounded" value={registerData.role} onChange={e=>setRegisterData({...registerData, role: e.target.value})}>
+              <option value="STUDENT">Étudiant</option>
+              <option value="ADMIN">Administrateur</option>
+              <option value="PROFESSOR">Professeur</option>
+            </select>
+            <button className="w-full bg-green-600 text-white py-2 rounded font-bold">S'inscrire</button>
+          </form>
+        )}
       </div>
     </div>
   );
